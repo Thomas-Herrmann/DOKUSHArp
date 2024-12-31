@@ -1,0 +1,27 @@
+﻿@page "/"
+@using Microsoft.Extensions.Options
+@inject MangaService MangaService
+@inject IOptions<EngineOptions> EngineOptions
+
+<PageTitle>DOKUSHArp</PageTitle>
+
+<div>
+	@foreach(var mangaMeta in mangaMetas)
+	{
+		<div>
+			<img src="@(EngineOptions.Value.EngineBasePath)/cover/@mangaMeta.Id" />
+			<p> @mangaMeta.Title -- @mangaMeta.Id -- (@mangaMeta.NumCoverPages)</p>
+		</div>
+	}
+</div>
+
+@code{
+	private IReadOnlyList<MangaMetaRecord> mangaMetas = [];
+
+	protected override async Task OnInitializedAsync()
+	{
+		await base.OnInitializedAsync();
+
+		mangaMetas = await MangaService.GetMangasAsync().ConfigureAwait(false);
+	}
+}

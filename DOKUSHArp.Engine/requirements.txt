@@ -1,0 +1,8 @@
+Flask==3.0.3
+opencv-python
+openai
+manga_ocr
+pillow
+ultralytics
+numpy
+ebooklib

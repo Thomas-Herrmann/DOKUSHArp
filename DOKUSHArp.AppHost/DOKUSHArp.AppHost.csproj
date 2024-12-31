@@ -13,6 +13,11 @@
 
   <ItemGroup>
     <PackageReference Include="Aspire.Hosting.AppHost" Version="9.0.0" />
+    <PackageReference Include="Aspire.Hosting.Python" Version="9.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\DOKUSHArp.Web\DOKUSHArp.Web.csproj" />
   </ItemGroup>
 
 </Project>
