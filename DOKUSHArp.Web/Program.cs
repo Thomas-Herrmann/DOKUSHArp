@@ -1,4 +1,5 @@
 using DOKUSHArp.Web.Components;
+using DOKUSHArp.Web.Components.Store;
 using DOKUSHArp.Web.Services;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -6,9 +7,18 @@ var builder = WebApplication.CreateBuilder(args);
 builder.AddServiceDefaults();
 
 // Add services to the container.
-builder.Services.AddRazorComponents();
+builder.Services.AddRazorComponents().AddInteractiveServerComponents();
 builder.Services.AddHttpClient<MangaService>(client => client.BaseAddress = new Uri("https+http://dokusharp-engine"));
 builder.Services.Configure<EngineOptions>(options => options.EngineBasePath = builder.Configuration["engine"]!);
+
+var stateTypes = typeof(Program).Assembly
+    .GetTypes()
+    .Where(type => !type.IsAbstract && type.GetInterfaces().Any(@interface => @interface.IsGenericType && @interface.GetGenericTypeDefinition() == typeof(IState<>) && @interface.GetGenericArguments()[0] == type));
+
+builder.Services.AddScoped<Store>();
+
+foreach (var stateType in stateTypes)
+    builder.Services.AddScoped(typeof(State<>).MakeGenericType(stateType));
 
 var app = builder.Build();
 
@@ -23,11 +33,8 @@ if (!app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
-
-
 app.UseAntiforgery();
-
 app.MapStaticAssets();
-app.MapRazorComponents<App>();
+app.MapRazorComponents<App>().AddInteractiveServerRenderMode();
 
-app.Run();
+await app.RunAsync();

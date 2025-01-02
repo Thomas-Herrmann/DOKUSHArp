@@ -1,0 +1,8 @@
+﻿@page "/manga/{MangaId}"
+@rendermode InteractiveServer
+
+<h3>@MangaId</h3>
+
+@code {
+	[Parameter] public required string MangaId { get; set; }
+}

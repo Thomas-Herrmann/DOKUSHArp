@@ -1,27 +1,22 @@
 ﻿@page "/"
+@rendermode InteractiveServer
+@using DOKUSHArp.Web.Components.Store
+@using DOKUSHArp.Web.Components.Store.Manga
 @using Microsoft.Extensions.Options
-@inject MangaService MangaService
 @inject IOptions<EngineOptions> EngineOptions
+@inject NavigationManager Navigator
+@inject State<MangaState> MangaState
+@inherits StatefulComponent
 
 <PageTitle>DOKUSHArp</PageTitle>
+<MangaLoader />
 
 <div>
-	@foreach(var mangaMeta in mangaMetas)
+	@foreach(var (id, mangaMeta) in MangaState.Value.AvailableManga)
 	{
-		<div>
-			<img src="@(EngineOptions.Value.EngineBasePath)/cover/@mangaMeta.Id" />
-			<p> @mangaMeta.Title -- @mangaMeta.Id -- (@mangaMeta.NumCoverPages)</p>
+		<div @onclick="@(() => Navigator.NavigateTo($"/manga/{id}"))">
+			<img src="@(EngineOptions.Value.EngineBasePath)/cover/@id" />
+			<p> @mangaMeta.Title -- @id -- (@mangaMeta.NumCoverPages)</p>
 		</div>
 	}
 </div>
-
-@code{
-	private IReadOnlyList<MangaMetaRecord> mangaMetas = [];
-
-	protected override async Task OnInitializedAsync()
-	{
-		await base.OnInitializedAsync();
-
-		mangaMetas = await MangaService.GetMangasAsync().ConfigureAwait(false);
-	}
-}
