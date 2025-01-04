@@ -14,7 +14,7 @@
 <div>
 	@foreach(var (id, mangaMeta) in MangaState.Value.AvailableManga)
 	{
-		<div @onclick="@(() => Navigator.NavigateTo($"/manga/{id}"))">
+		<div @onclick="@(() => Navigator.NavigateTo($"/manga/{id}/page/0"))">
 			<img src="@(EngineOptions.Value.EngineBasePath)/cover/@id" />
 			<p> @mangaMeta.Title -- @id -- (@mangaMeta.NumCoverPages)</p>
 		</div>

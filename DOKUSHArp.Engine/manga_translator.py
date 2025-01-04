@@ -42,8 +42,13 @@ class Translator:
             cropped_pixels = image[int(y1):int(y2), int(x1):int(x2)]
             self.__add_new_text(cropped_pixels, text_bubble_contours[index], translations[index], proposed_line_height)
 
-        return image, [cv2.boundingRect(contour) for contour in text_bubble_contours]
+        return image, [Translator.__offset_bounding_box(cv2.boundingRect(contour), bounding_boxes[index]) for index, contour in enumerate(text_bubble_contours)]
     
+    def __offset_bounding_box(target_box, offset_box):
+        offset_x, offset_y, _, _, _, _ = offset_box
+        
+        return (target_box[0] + offset_x, target_box[1] + offset_y, target_box[2], target_box[3])
+
     def __remove_existing_text(self, cropped_pixels):
         gray = cv2.cvtColor(cropped_pixels, cv2.COLOR_BGR2GRAY)
         _, thresh = cv2.threshold(gray, 240, 255, cv2.THRESH_BINARY)

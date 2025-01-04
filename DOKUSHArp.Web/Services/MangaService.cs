@@ -1,14 +1,21 @@
 ﻿using System.Security.Cryptography;
+using System.Text.Json;
 
 namespace DOKUSHArp.Web.Services;
 
 public sealed class MangaService(HttpClient client)
 {
+	private static readonly JsonSerializerOptions SerializationOptions = MakeSerializationOptions();
+
 	public async Task<IReadOnlyList<MangaMetaRecord>> GetMangasAsync(CancellationToken cancellationToken = default) => await client
-		.GetFromJsonAsAsyncEnumerable<MangaMetaRecord>("/mangas", new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true }, cancellationToken)
+		.GetFromJsonAsAsyncEnumerable<MangaMetaRecord>("/mangas", SerializationOptions, cancellationToken)
 		.OfType<MangaMetaRecord>()
 		.ToListAsync(cancellationToken: cancellationToken)
 		.ConfigureAwait(false);
+
+	public async Task<MangaPage> GetMangaPageAsync(string mangaId, int pageIndex, CancellationToken cancellationToken = default) => await client
+		.GetFromJsonAsync<MangaPage>($"/manga/{mangaId}/page/{pageIndex}", SerializationOptions, cancellationToken)
+		.ConfigureAwait(false) ?? throw new InvalidOperationException("Unable to fetch page");
 
 	public async Task UploadManga(Stream epubFileStream, string title, int coverPageCount, CancellationToken cancellationToken = default)
 	{
@@ -28,6 +35,15 @@ public sealed class MangaService(HttpClient client)
 			await UploadChunk(buffer, countRead, id, cancellationToken).ConfigureAwait(false);
 
 		await EndUpload(id, cancellationToken).ConfigureAwait(false);
+	}
+
+	private static JsonSerializerOptions MakeSerializationOptions()
+	{
+		var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+
+		options.Converters.Add(new BoundingBoxConverter());
+
+		return options;
 	}
 
 	private async Task BeginUpload(byte[] fileHash, string title, int coverPageCount, Guid id, CancellationToken cancellationToken)

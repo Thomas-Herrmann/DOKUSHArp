@@ -30,7 +30,7 @@ class ProcessScheduler:
             if success:
                 return translated_image, bounding_boxes
 
-            translated_image, bounding_boxes = self.__translator.process(cv2_image)
+            translated_image, bounding_boxes = self.__translator.process(cv2_image.copy())
             
             cv2.imwrite(os.path.join(self.__store_path, id, 'translated', f'{page_index}.png'), translated_image)
 
@@ -45,7 +45,7 @@ class ProcessScheduler:
     def __schedule_internal(self, id: str, from_index: int, to_index: int):
         for page_index in range(from_index, to_index):
             success, _, _ = self.__try_get_existing_translation(id, page_index)
-    
+
             if not success:
                 original_image = cv2.imread(os.path.join(self.__store_path, id, 'page', f'{page_index}.png'))
                 
@@ -54,9 +54,9 @@ class ProcessScheduler:
     def __try_get_existing_translation(self, id: str, page_index: int):
         try:
             translated_image = cv2.imread(os.path.join(self.__store_path, id, 'translated', f'{page_index}.png'))
-            
+
             with open(os.path.join(self.__store_path, id, 'translated', f'{page_index}.txt'), 'r') as read_handle:
-                bounding_boxes = ProcessScheduler.__parse_bounding_box_str(read_handle.read)
+                bounding_boxes = ProcessScheduler.__parse_bounding_box_str(read_handle.read())
 
             return True, translated_image, bounding_boxes
         except:

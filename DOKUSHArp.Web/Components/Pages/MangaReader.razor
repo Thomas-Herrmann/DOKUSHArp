@@ -1,8 +1,158 @@
-﻿@page "/manga/{MangaId}"
+﻿@page "/manga/{MangaId}/page/{PageIndex:int}"
+@using Blazor.Extensions
 @rendermode InteractiveServer
+@inject MangaService MangaService
+@inject IJSRuntime JSRuntime
+@inject NavigationManager Navigator
 
-<h3>@MangaId</h3>
+<head>
+	<style>
+		canvas {
+		background-color: pink;
+		width: 100%;
+		height: 100%;
+		}
+
+		html, body {
+		width: 100%;
+		height: 100%;
+		margin: 0;
+		}
+	</style>
+</head>
+
+<canvas id="mangaCanvas"></canvas>
+
+<script>
+	window.setDotNetReference = (reference) => {
+		window.dotNetReference = reference;
+	};
+
+	window.drawImageOnCanvas = (originalImageData, translatedImageData, boundingBoxes) => {
+		return new Promise((resolve, reject) => {
+			const canvas = document.getElementById('mangaCanvas');
+			const originalImage = new Image();
+			const translatedImage = new Image();
+
+			window.originalImage = originalImage;
+			window.translatedImage = translatedImage;
+			window.boundingBoxes = boundingBoxes;
+			window.boundingBoxVisibilityMapping = Array(boundingBoxes.length).fill(false);
+			window.loadedCount = 0;
+
+			originalImage.onload = () => {
+				window.loadedCount++;
+
+				window.addEventListener('resize', (event) => {
+					redrawPage();
+				});
+
+				redrawPage();
+				resolve(true);
+			};
+
+			originalImage.onerror = (error) => {
+				reject(error);
+			};
+
+			translatedImage.onload = () => {
+				window.loadedCount++;
+
+				resolve(true);
+			};
+
+			translatedImage.onerror = (error) => {
+				reject(error);
+			};
+
+			canvas.addEventListener('click', (event) => {
+				if (window.loadedCount != 2) {
+					return;
+				}
+
+				const boundingRect = canvas.getBoundingClientRect();
+				const mouseX = (event.clientX - boundingRect.left) * (canvas.width / document.body.clientWidth) - canvas.width / 2 + originalImage.width / 2;
+				const mouseY = (event.clientY - boundingRect.top) * (canvas.height / document.body.clientHeight) - canvas.height / 2 + originalImage.height / 2;
+
+				for (let index = 0; index < boundingBoxes.length; index++) {
+					const { x, y, width, height } = boundingBoxes[index];
+
+					if (mouseX >= x && mouseX <= x + width && mouseY >= y && mouseY <= y + height) {
+						window.boundingBoxVisibilityMapping[index] = !window.boundingBoxVisibilityMapping[index];
+
+						redrawPage();
+
+						return;
+					}
+				}
+
+				if (mouseX <= originalImage.width / 2) {
+					window.dotNetReference.invokeMethodAsync('NavigateToNextPage');
+				} else {
+					window.dotNetReference.invokeMethodAsync('NavigateToPreviousPage');
+				}
+			});
+
+			originalImage.src = originalImageData;
+			translatedImage.src = translatedImageData;
+		});
+	};
+
+	function redrawPage() {
+		const canvas = document.getElementById('mangaCanvas');
+		const ctx = canvas.getContext('2d');
+		const originalImage = window.originalImage;
+		const translatedImage = window.translatedImage;
+
+		canvas.height = originalImage.height;
+		canvas.width = document.body.clientWidth / document.body.clientHeight * originalImage.height
+
+		ctx.translate(canvas.width / 2 - originalImage.width / 2, canvas.height / 2 - originalImage.height / 2);
+		ctx.drawImage(originalImage, 0, 0);
+
+		for (let index = 0; index < window.boundingBoxVisibilityMapping.length; index++) {
+			if (window.boundingBoxVisibilityMapping[index] == true) {
+				const { x, y, width, height } = window.boundingBoxes[index];
+
+				ctx.drawImage(translatedImage, x, y, width, height, x, y, width, height);
+			}
+		}
+
+		ctx.setTransform(1, 0, 0, 1, 0, 0);
+	}
+</script>
 
 @code {
 	[Parameter] public required string MangaId { get; set; }
+
+	[Parameter] public required int PageIndex { get; set; }
+
+	protected override async Task OnAfterRenderAsync(bool firstRender)
+	{
+		await base.OnAfterRenderAsync(firstRender).ConfigureAwait(false);
+
+		if (!firstRender) return;
+
+		var page = await MangaService.GetMangaPageAsync(MangaId, PageIndex);
+
+		await JSRuntime.InvokeVoidAsync("setDotNetReference", DotNetObjectReference.Create(this));
+		await JSRuntime.InvokeVoidAsync(
+			"drawImageOnCanvas",
+			"data:image/png;base64," + page.OriginalImage,
+			"data:image/png;base64," + page.TranslatedImage,
+			page.BoundingBoxes.Select(box => new { box.X, box.Y, box.Width, box.Height }).ToList());
+	}
+
+	[JSInvokable]
+	public void NavigateToNextPage()
+	{
+		// TODO: use MangaState to check whether page is within length
+		Navigator.NavigateTo($"/manga/{MangaId}/page/{PageIndex + 1}");
+	}
+
+	[JSInvokable]
+	public void NavigateToPreviousPage()
+	{
+		if (PageIndex > 0) Navigator.NavigateTo($"/manga/{MangaId}/page/{PageIndex - 1}");
+	}
 }
