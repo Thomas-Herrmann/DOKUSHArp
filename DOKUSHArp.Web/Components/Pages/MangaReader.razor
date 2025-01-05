@@ -74,11 +74,17 @@
 				const mouseX = (event.clientX - boundingRect.left) * (canvas.width / document.body.clientWidth) - canvas.width / 2 + originalImage.width / 2;
 				const mouseY = (event.clientY - boundingRect.top) * (canvas.height / document.body.clientHeight) - canvas.height / 2 + originalImage.height / 2;
 
-				for (let index = 0; index < boundingBoxes.length; index++) {
-					const { x, y, width, height } = boundingBoxes[index];
+				for (const boundingBox of boundingBoxes) {
+					const { x, y, width, height } = boundingBox;
 
 					if (mouseX >= x && mouseX <= x + width && mouseY >= y && mouseY <= y + height) {
-						window.boundingBoxVisibilityMapping[index] = !window.boundingBoxVisibilityMapping[index];
+						for (let candidateIndex = 0; candidateIndex < boundingBoxes.length; candidateIndex++) {
+							const candidate = boundingBoxes[candidateIndex];
+
+							if (candidate.x <= x + width && x <= candidate.x + candidate.width && candidate.y <= y + height && y <= candidate.y + candidate.height) {
+								window.boundingBoxVisibilityMapping[candidateIndex] = !window.boundingBoxVisibilityMapping[candidateIndex];
+							}
+						}
 
 						redrawPage();
 
