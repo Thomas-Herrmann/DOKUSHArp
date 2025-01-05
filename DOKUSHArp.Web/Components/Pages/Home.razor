@@ -6,11 +6,15 @@
 @inject IOptions<EngineOptions> EngineOptions
 @inject NavigationManager Navigator
 @inject State<MangaState> MangaState
+@inject MangaService MangaService
 @inherits StatefulComponent
 
 <PageTitle>DOKUSHArp</PageTitle>
 <MangaLoader />
 
+<div>
+	<InputFile OnChange="UploadEpubAsync" />
+</div>
 <div>
 	@foreach(var (id, mangaMeta) in MangaState.Value.AvailableManga)
 	{
@@ -20,3 +24,19 @@
 		</div>
 	}
 </div>
+
+@code{
+	private async Task UploadEpubAsync(InputFileChangeEventArgs args)
+	{
+		if (!string.Equals(args.File.ContentType, "application/epub+zip", StringComparison.OrdinalIgnoreCase)) return;
+
+		using var memoryStream = new MemoryStream();
+		using var sourceStream = args.File.OpenReadStream(209715200);
+
+		await sourceStream.CopyToAsync(memoryStream).ConfigureAwait(false);
+
+		memoryStream.Position = 0;
+
+		await MangaService.UploadManga(memoryStream, args.File.Name, 1).ConfigureAwait(false);
+	}
+}
